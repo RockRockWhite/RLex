@@ -25,11 +25,11 @@ pub struct NFA {
 }
 
 pub fn to_nfa(expr: PostfixExpr) -> NFA {
-    let mut expr = expr.0;
+    let expr = expr.0;
     let mut stack: Vec<NFA> = Vec::new();
 
-    let mut left: Option<Rc<StateVertex>> = Option::None;
-    let mut right: Option<Rc<StateVertex>> = Option::None;
+    // let mut left: Option<Rc<StateVertex>> = Option::None;
+    // let mut right: Option<Rc<StateVertex>> = Option::None;
 
     for each in expr.iter() {
         match each {
@@ -138,37 +138,39 @@ pub fn to_nfa(expr: PostfixExpr) -> NFA {
         }
     }
 
+    stack.pop().unwrap()
+
     // 进行连接
-    let mut right = stack.pop().unwrap();
+    // let mut right = stack.pop().unwrap();
 
-    while let Some(left) = stack.pop() {
-        // 添加epsilon-move
-        left.end
-            .borrow_mut()
-            .epsilon_neighbors
-            .push(Rc::clone(&right.start));
+    // while let Some(left) = stack.pop() {
+    //     // 添加epsilon-move
+    //     left.end
+    //         .borrow_mut()
+    //         .epsilon_neighbors
+    //         .push(Rc::clone(&right.start));
 
-        right = NFA {
-            start: Rc::clone(&left.start),
-            end: Rc::clone(&right.end),
-        };
-    }
+    //     right = NFA {
+    //         start: Rc::clone(&left.start),
+    //         end: Rc::clone(&right.end),
+    //     };
+    // }
 
-    while stack.len() > 1 {
-        let right = stack.pop().unwrap();
-        let left = stack.pop().unwrap();
+    // while stack.len() > 1 {
+    //     let right = stack.pop().unwrap();
+    //     let left = stack.pop().unwrap();
 
-        // 添加epsilon-move
-        left.end
-            .borrow_mut()
-            .epsilon_neighbors
-            .push(Rc::clone(&right.start));
+    //     // 添加epsilon-move
+    //     left.end
+    //         .borrow_mut()
+    //         .epsilon_neighbors
+    //         .push(Rc::clone(&right.start));
 
-        stack.push(NFA {
-            start: Rc::clone(&left.start),
-            end: Rc::clone(&right.end),
-        });
-    }
+    //     stack.push(NFA {
+    //         start: Rc::clone(&left.start),
+    //         end: Rc::clone(&right.end),
+    //     });
+    // }
 
-    right
+    // right
 }
