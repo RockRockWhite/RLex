@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{nfa::StateVertex, NFA};
 
@@ -10,7 +10,7 @@ use crate::{nfa::StateVertex, NFA};
 /// B((B))
 /// A--a-->B
 /// ```
-pub fn parse_nfa(nfa: NFA) -> String {
+pub fn parse_nfa(nfa: &NFA) -> String {
     // 遍历图
     let mut visited = Vec::new();
     let edge = tarverse_vertex(Rc::clone(&nfa.start), &mut visited);

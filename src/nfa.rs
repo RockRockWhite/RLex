@@ -24,8 +24,8 @@ pub struct NFA {
     pub end: Rc<RefCell<StateVertex>>,
 }
 
-pub fn to_nfa(expr: PostfixExpr) -> NFA {
-    let expr = expr.0;
+pub fn to_nfa(expr: &PostfixExpr) -> NFA {
+    let expr = &expr.0;
     let mut stack: Vec<NFA> = Vec::new();
 
     // let mut left: Option<Rc<StateVertex>> = Option::None;
