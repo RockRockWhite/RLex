@@ -6,10 +6,14 @@ fn main() {
     let mermaid = rlex::mermaid::parse_nfa(&nfa);
     println!("{}", mermaid);
 
-    let mut closure = Vec::new();
-    rlex::epsilon_closure(Rc::clone(&nfa.start.borrow().neighbors[&b'c']), &mut closure);
+    let dfa = rlex::to_dfa(&nfa);
 
-    for each in closure {
-        println!("{}", each.as_ptr() as usize);
-    }
+    let res = dfa;
+
+    // let mut closure = Vec::new();
+    // rlex::epsilon_closure(Rc::clone(&nfa.start.borrow().neighbors[&b'c']), &mut closure);
+
+    // for each in closure {
+    //     println!("{}", each.as_ptr() as usize);
+    // }
 }
