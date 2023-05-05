@@ -6,6 +6,9 @@ fn main() {
     // }
 
     let nfa = rlex::to_nfa(postfix);
+    let mermaid = rlex::mermaid::parse_nfa(nfa);
+
+    println!("{}", mermaid);
 
     // let nfa = rlex::to_nfa(postfix);
     // nfa::to_nfa();

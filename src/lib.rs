@@ -1,3 +1,4 @@
+pub mod mermaid;
 mod nfa;
 mod postfix;
 
