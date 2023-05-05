@@ -61,6 +61,7 @@ c(a|bbcb*)*(ab)
 上述样例结果如下
 
 ```mermaid
+graph LR
 0((S))
 1((1))
 2((2))
