@@ -103,6 +103,23 @@ pub fn to_nfa(expr: PostfixExpr) -> NFA {
 
                 stack.push(curr_nfa);
             }
+            b'.' => {
+                // 对应连接的逻辑
+                // 按照固定的公式处理
+                let right = stack.pop().unwrap();
+                let left = stack.pop().unwrap();
+
+                // 添加epsilon-move
+                left.end
+                    .borrow_mut()
+                    .epsilon_neighbors
+                    .push(Rc::clone(&right.start));
+
+                stack.push(NFA {
+                    start: Rc::clone(&left.start),
+                    end: Rc::clone(&right.end),
+                });
+            }
             _ => {
                 // 若只是字母，创建对应的节点，然后入栈
                 // 例如：S0 --a--> S1

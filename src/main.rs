@@ -1,5 +1,5 @@
 fn main() {
-    let postfix = rlex::to_postfix("(c(abc|b*))");
+    let postfix = rlex::to_postfix("c(a|bbcb*)*(ab)");
 
     // for each in postfix.0 {
     //     print!("{}", each as char);
