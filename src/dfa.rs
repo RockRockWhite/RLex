@@ -1,18 +1,18 @@
-use std::{cell::RefCell, collections::HashMap, hash::Hash, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 
-use crate::{nfa::StateVertex as NFAStateVertex, NFA};
+use crate::{nfa::NfaVertexRef, NFA};
 
-pub struct DFAStateVertex {
+pub struct StateVertex {
     pub acceptable: bool,
-    pub epsilon_closure: Vec<Rc<RefCell<NFAStateVertex>>>,
-    pub neighbors: HashMap<u8, Rc<RefCell<DFAStateVertex>>>,
+    pub epsilon_closure: Vec<NfaVertexRef>,
+    pub neighbors: HashMap<u8, DfaVertexRef>,
 }
 
-pub struct DFA(Rc<RefCell<DFAStateVertex>>);
+pub struct DfaVertexRef(Rc<RefCell<StateVertex>>);
 
-impl DFA {
+impl DfaVertexRef {
     pub fn new() -> Self {
-        DFA(Rc::new(RefCell::new(DFAStateVertex {
+        DfaVertexRef(Rc::new(RefCell::new(StateVertex {
             acceptable: false,
             epsilon_closure: Vec::new(),
             neighbors: HashMap::new(),
@@ -20,148 +20,138 @@ impl DFA {
     }
 }
 
+impl Deref for DfaVertexRef {
+    type Target = Rc<RefCell<StateVertex>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Clone for DfaVertexRef {
+    fn clone(&self) -> Self {
+        DfaVertexRef(Rc::clone(&self.0))
+    }
+}
+
+impl PartialEq for DfaVertexRef {
+    fn eq(&self, other: &Self) -> bool {
+        let closure1 = &self.borrow().epsilon_closure;
+        let closure2 = &other.borrow().epsilon_closure;
+        if closure1.len() != closure2.len() {
+            return false;
+        }
+
+        closure1.iter().all(|each| closure2.contains(each))
+    }
+}
+
 /// epsilon_closure
 /// get epsilon closure of a vertex
 /// result will be stored in visited
-fn epsilon_closure(
-    vertex: Rc<RefCell<NFAStateVertex>>,
-    visited: &mut Vec<Rc<RefCell<NFAStateVertex>>>,
-) {
-    visited.iter().any(|each| {
-        if Rc::ptr_eq(&vertex, each) {
-            return true;
-        }
-        false
-    });
+pub fn epsilon_closure(vertex: NfaVertexRef, visited: &mut Vec<NfaVertexRef>) {
+    if visited.contains(&vertex) {
+        return;
+    }
 
     // 将自身添加到闭包中
-    visited.push(Rc::clone(&vertex));
+    visited.push(NfaVertexRef::clone(&vertex));
 
     // 遍历相邻节点
     vertex.borrow().epsilon_neighbors.iter().for_each(|each| {
-        epsilon_closure(Rc::clone(&each), visited);
+        epsilon_closure(NfaVertexRef::clone(&each), visited);
     });
 }
 
 /// to_dfa
 /// convert nfa to dfa
 /// return start vertex of dfa
-pub fn to_dfa(nfa: &NFA) -> Rc<RefCell<DFAStateVertex>> {
+pub fn to_dfa(nfa: &NFA) -> DfaVertexRef {
     // 以nfa的开始节点的epsilon-closure为开始节点
-    let start = Rc::new(RefCell::new(DFAStateVertex::new()));
+    let start = DfaVertexRef::new();
+
     epsilon_closure(
-        Rc::clone(&nfa.start),
+        NfaVertexRef::clone(&nfa.start),
         &mut start.borrow_mut().epsilon_closure,
     );
 
     // 递归扩展
     let mut visited = Vec::new();
-    tarverse_vertex(Rc::clone(&start), &mut visited);
-
-    println!("visited: {}", visited.len());
+    tarverse_vertex(DfaVertexRef::clone(&start), &mut visited);
 
     start
 }
 
 // 扩展当前dfa节点
-pub fn tarverse_vertex(
-    vertex: Rc<RefCell<DFAStateVertex>>,
-    visited: &mut Vec<Rc<RefCell<DFAStateVertex>>>,
-) {
+pub fn tarverse_vertex(vertex: DfaVertexRef, visited: &mut Vec<DfaVertexRef>) {
     // 如果当前节点已经访问过，则返回
     // 否则，将自身添加到已访问节点中
-    if visited.iter().any(|each| {
-        if Rc::ptr_eq(&vertex, each) {
-            return true;
-        }
-        false
-    }) {
+    if visited.contains(&vertex) {
         return;
     }
-    visited.push(Rc::clone(&vertex));
+    visited.push(DfaVertexRef::clone(&vertex));
 
-    let mut neighbors: HashMap<u8, Rc<RefCell<DFAStateVertex>>> = HashMap::new();
+    // 遍历当前节点的epsilon-closure
+    // 求出closure中每个元素的可以到达的节点的epsilon-closure
+    // 并且将其添加到当前节点的neighbors中
+    let mut neighbors: HashMap<u8, DfaVertexRef> = HashMap::new();
+
     vertex
         .borrow()
         .epsilon_closure
         .iter()
-        .for_each(|each_nfa_vertex| {
-            // 遍历闭包中的每个节点的相邻节点
-            each_nfa_vertex
+        .for_each(|each_closure| {
+            // 遍历每个闭包的相邻节点
+            each_closure
                 .borrow()
                 .neighbors
                 .iter()
-                .for_each(|(key, value)| {
-                    // 如果对应的转换状态不存在，则创建
-                    if !neighbors.contains_key(key) {}
-
-                    let neighbor = match neighbors.get(key) {
-                        Some(each) => Rc::clone(each),
+                .for_each(|(&cond, nfa_vertex)| {
+                    // 如果对应当前状态的转换条件不存在，则创建
+                    let cond_neighbor = match neighbors.get(&cond) {
+                        Some(each) => DfaVertexRef::clone(each),
                         None => {
-                            let new_neighbor = Rc::new(RefCell::new(DFAStateVertex::new()));
-                            neighbors.insert(*key, Rc::clone(&new_neighbor));
+                            let new_neighbor = DfaVertexRef::new();
+                            neighbors.insert(cond, DfaVertexRef::clone(&new_neighbor));
                             new_neighbor
                         }
                     };
 
-                    // 求出对应的epsilon-closure
+                    // 计算改nfa节点的epsilon-closure
                     let mut closure = Vec::new();
-                    epsilon_closure(Rc::clone(&value), &mut neighbor.borrow_mut().closure);
+                    epsilon_closure(NfaVertexRef::clone(&nfa_vertex), &mut closure);
 
-                    if neighbor.borrow().epsilon_closure.iter().any(|each| {
-                        if Rc::ptr_eq(&value, each) {
-                            return true;
+                    // 遍历该闭包中的每个节点
+                    // 如果当前转换条件的邻居节点的epsilon-closure中已经包含了该节点，则不添加
+                    // 否则，添加到该节点的epsilon-closure中
+                    closure.iter().for_each(|each| {
+                        if cond_neighbor.borrow().epsilon_closure.contains(each) {
+                            return;
                         }
-                        false
-                    }) {
-                        return;
-                    }
 
-                    neighbor
-                        .borrow_mut()
-                        .epsilon_closure
-                        .push(Rc::clone(&value));
+                        cond_neighbor
+                            .borrow_mut()
+                            .epsilon_closure
+                            .push(NfaVertexRef::clone(each));
+                    })
                 });
         });
 
-    // 遍历当前节点的相邻节点
-    // 如果有和访问过的重复，则替换为已访问的节点
-    // 否则，递归扩展
-    neighbors.iter_mut().for_each(|(_, value)| {
-        let mut matched_visited: Option<Rc<RefCell<DFAStateVertex>>> = None;
-        visited.iter().for_each(|each_visited| {
-            if each_visited.borrow().epsilon_closure.len() != value.borrow().epsilon_closure.len() {
-                return;
-            }
-
-            // 判断closure是否相等
-            if each_visited
-                .borrow()
-                .epsilon_closure
-                .iter()
-                .all(|each_closure| {
-                    value.borrow().epsilon_closure.iter().any(|each| {
-                        if Rc::ptr_eq(&each_closure, each) {
-                            return true;
-                        }
-                        false
-                    })
-                })
-            {
-                matched_visited = Some(Rc::clone(each_visited));
-            }
-        });
-
-        // 替换
-        if let Some(matched_visited) = matched_visited.take() {
-            *value = matched_visited;
+    // 遍历所有的neightbors
+    // 如果visited中已经出现过该节点，则用visited中的节点替换
+    neighbors.iter_mut().for_each(|(_, vertex)| {
+        if let Some(same) = visited.iter().find(|&each_visited| each_visited == vertex) {
+            *vertex = DfaVertexRef::clone(same);
         }
     });
 
-    // 更新neighbors
+    // 将neighbors添加到当前节点的neighbors中
     vertex.borrow_mut().neighbors = neighbors;
+
     // 递归扩展
-    vertex.borrow().neighbors.iter().for_each(|(_, value)| {
-        tarverse_vertex(Rc::clone(value), visited);
-    });
+    vertex
+        .borrow()
+        .neighbors
+        .iter()
+        .for_each(|(_, neighbor)| tarverse_vertex(DfaVertexRef::clone(neighbor), visited));
 }

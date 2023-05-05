@@ -13,7 +13,7 @@ use crate::{nfa::StateVertex, NFA};
 pub fn parse_nfa(nfa: &NFA) -> String {
     // 遍历图
     let mut visited = Vec::new();
-    let edge = tarverse_vertex(Rc::clone(&nfa.start), &mut visited);
+    let edge = tarverse_nfa_vertex(Rc::clone(&nfa.start), &mut visited);
 
     // 添加节点
     let mut vertex = String::new();
@@ -38,7 +38,7 @@ pub fn parse_nfa(nfa: &NFA) -> String {
 /// tarverse_vertex
 /// 遍历NFA节点，返回其顶点和边
 /// return edges
-fn tarverse_vertex(
+fn tarverse_nfa_vertex(
     start: Rc<RefCell<StateVertex>>,
     visited: &mut Vec<Rc<RefCell<StateVertex>>>,
 ) -> String {
@@ -74,7 +74,7 @@ fn tarverse_vertex(
         .neighbors
         .iter()
         .for_each(|(&cond, vertex)| {
-            let neighbor_edges = tarverse_vertex(Rc::clone(&vertex), visited);
+            let neighbor_edges = tarverse_nfa_vertex(Rc::clone(&vertex), visited);
             // 将结果添加到边中
             edges.push_str(&neighbor_edges);
 
@@ -91,7 +91,7 @@ fn tarverse_vertex(
         .epsilon_neighbors
         .iter()
         .for_each(|vertex| {
-            let neighbor_edges = tarverse_vertex(Rc::clone(&vertex), visited);
+            let neighbor_edges = tarverse_nfa_vertex(Rc::clone(&vertex), visited);
             // 将结果添加到边中
             edges.push_str(&neighbor_edges);
 
