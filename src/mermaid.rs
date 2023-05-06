@@ -120,7 +120,11 @@ pub fn parse_dfa(vertex: &DfaVertexRef) -> String {
     // 添加节点
     let mut vertex = String::new();
     visited.iter().enumerate().for_each(|(id, each)| {
-        vertex.push_str(&format!("{}(({}))\n", id, id));
+        if each.borrow().acceptable {
+            vertex.push_str(&format!("{}(({}-A))\n", id, id));
+        } else {
+            vertex.push_str(&format!("{}(({}))\n", id, id));
+        }
     });
 
     format!("graph LR\n{}\n{}", vertex, edge)

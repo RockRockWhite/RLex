@@ -79,6 +79,13 @@ pub fn to_dfa(nfa: &NFA) -> DfaVertexRef {
     let mut visited = Vec::new();
     tarverse_vertex(DfaVertexRef::clone(&start), &mut visited);
 
+    // 标注可接受状态
+    visited.iter().for_each(|each| {
+        if each.borrow().epsilon_closure.contains(&nfa.end) {
+            each.borrow_mut().acceptable = true;
+        }
+    });
+
     start
 }
 
