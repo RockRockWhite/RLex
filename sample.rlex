@@ -1,0 +1,27 @@
+%{
+    pub struct Foo {
+        x: i32,
+        y: i32,
+    }
+
+    pub struct Bar {
+        x: i32,
+        y: i32,
+    }
+%}
+    number = "(0|1|2|3|4)*"
+    idenfitier = "(a|b|c|d|e)(a|b|c|d|e|0|1|2|3|4)*"
+    error = "( |;|?|,|!|=)*"
+%%
+    {number} -> |s|{
+        println!("number: {}", s);
+    } ;;
+    {idenfitier} -> |s|{
+        println!("idenfitier: {}", s);
+    } ;;
+    {error} -> |s|{
+        println!("error: {}", s);
+    } ;;
+%%
+    pub a: i32,
+    pub b: i64, 
