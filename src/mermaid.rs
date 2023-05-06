@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{nfa::StateVertex, DfaVertexRef, NFA};
+use crate::{dfa::Dfa, nfa::StateVertex, DfaVertexRef, NFA};
 
 /// Converts an NFA to a mermaid graph
 /// https://mermaid-js.github.io/mermaid/#/graph?id=graph
@@ -112,10 +112,11 @@ fn tarverse_nfa_vertex(
 /// B((B))
 /// A--a-->B
 /// ```
-pub fn parse_dfa(vertex: &DfaVertexRef) -> String {
+/// **节点id仅用于标注，不保证与lookup table的id完全一样**
+pub fn parse_dfa(dfa: &Dfa) -> String {
     // 遍历图
     let mut visited = Vec::new();
-    let edge = tarverse_dfa_vertex(DfaVertexRef::clone(&vertex), &mut visited);
+    let edge = tarverse_dfa_vertex(dfa.get_start(), &mut visited);
 
     // 添加节点
     let mut vertex = String::new();

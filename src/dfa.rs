@@ -46,6 +46,17 @@ impl PartialEq for DfaVertexRef {
     }
 }
 
+pub struct Dfa {
+    pub vertexs: Vec<DfaVertexRef>,
+    pub lookup: Vec<HashMap<u8, usize>>,
+}
+
+impl Dfa {
+    pub fn get_start(&self) -> DfaVertexRef {
+        DfaVertexRef::clone(&self.vertexs[0])
+    }
+}
+
 /// epsilon_closure
 /// get epsilon closure of a vertex
 /// result will be stored in visited
@@ -66,7 +77,7 @@ pub fn epsilon_closure(vertex: NfaVertexRef, visited: &mut Vec<NfaVertexRef>) {
 /// to_dfa
 /// convert nfa to dfa
 /// return start vertex of dfa
-pub fn to_dfa(nfa: &NFA) -> DfaVertexRef {
+pub fn to_dfa(nfa: &NFA) -> Dfa {
     // 以nfa的开始节点的epsilon-closure为开始节点
     let start = DfaVertexRef::new();
 
@@ -86,7 +97,30 @@ pub fn to_dfa(nfa: &NFA) -> DfaVertexRef {
         }
     });
 
-    start
+    let mut lookup = Vec::new();
+    // 生成lookup table
+    visited.iter().for_each(|each| {
+        let mut curr_vertex = HashMap::new();
+
+        // 遍历所有的邻居，写到转换表中
+        each.borrow()
+            .neighbors
+            .iter()
+            .for_each(|(&cond, neighbor)| {
+                let id = visited
+                    .iter()
+                    .position(|each| (*each) == (*neighbor))
+                    .unwrap();
+                curr_vertex.insert(cond, id);
+            });
+
+        lookup.push(curr_vertex);
+    });
+
+    Dfa {
+        vertexs: visited,
+        lookup,
+    }
 }
 
 // 扩展当前dfa节点
