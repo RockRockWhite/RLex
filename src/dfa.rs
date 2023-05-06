@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
-
 use crate::{nfa::NfaVertexRef, Nfa};
+use serde::{Deserialize, Serialize};
+use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 
 pub struct StateVertex {
     pub acceptable: bool,
@@ -48,7 +48,7 @@ impl PartialEq for DfaVertexRef {
 
 pub struct Dfa {
     pub vertexs: Vec<DfaVertexRef>,
-    pub lookup: Vec<HashMap<u8, usize>>,
+    pub lookup_table: LookupTable,
 }
 
 impl Dfa {
@@ -58,6 +58,25 @@ impl Dfa {
 
     pub fn is_acceptable(&self, id: usize) -> bool {
         self.vertexs.get(id).unwrap().borrow().acceptable
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LookupTable {
+    pub accept_states: Vec<usize>,
+    pub states: Vec<HashMap<u8, usize>>,
+}
+
+impl LookupTable {
+    pub fn new() -> Self {
+        LookupTable {
+            accept_states: Vec::new(),
+            states: Vec::new(),
+        }
+    }
+
+    pub fn is_acceptable(&self, id: usize) -> bool {
+        self.accept_states.contains(&id)
     }
 }
 
@@ -101,10 +120,10 @@ pub fn to_dfa(nfa: &Nfa) -> Dfa {
         }
     });
 
-    let mut lookup = Vec::new();
+    let mut lookup_table = LookupTable::new();
     // 生成lookup table
-    visited.iter().for_each(|each| {
-        let mut curr_vertex = HashMap::new();
+    visited.iter().enumerate().for_each(|(id, each)| {
+        let mut curr_state = HashMap::new();
 
         // 遍历所有的邻居，写到转换表中
         each.borrow()
@@ -115,15 +134,20 @@ pub fn to_dfa(nfa: &Nfa) -> Dfa {
                     .iter()
                     .position(|each| (*each) == (*neighbor))
                     .unwrap();
-                curr_vertex.insert(cond, id);
+                curr_state.insert(cond, id);
             });
 
-        lookup.push(curr_vertex);
+        lookup_table.states.push(curr_state);
+
+        // 如果当前节点是可接受状态，则将其id添加到可接受状态列表中
+        if each.borrow().acceptable {
+            lookup_table.accept_states.push(id);
+        }
     });
 
     Dfa {
         vertexs: visited,
-        lookup,
+        lookup_table,
     }
 }
 

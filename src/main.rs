@@ -1,5 +1,7 @@
 use core::num;
 
+use rlex::gen_code;
+
 fn main() {
     // let postfix = rlex::to_postfix("c(a|bbcb*)*(ab)");
     // // let postfix = rlex::to_postfix("c(abc|b*)");
@@ -29,48 +31,39 @@ fn my_test() {
     let number = rlex::to_postfix("(0|1|2|3|4)*");
     let number = rlex::to_nfa(&number);
     let number = rlex::to_dfa(&number);
-    reg_vec.push(number);
+    reg_vec.push(number.lookup_table);
 
     let identifier = rlex::to_postfix("(a|b|c|d|e)(a|b|c|d|e|0|1|2|3|4)*");
     let identifier = rlex::to_nfa(&identifier);
     let identifier = rlex::to_dfa(&identifier);
-    reg_vec.push(identifier);
+    reg_vec.push(identifier.lookup_table);
 
     let error = rlex::to_postfix("( |;|?|,|!|=)*");
     let error = rlex::to_nfa(&error);
     let error = rlex::to_dfa(&error);
-    reg_vec.push(error);
+    reg_vec.push(error.lookup_table);
 
-    let mut match_str: &str = "";
-    let mut res_str = "abcde1234123 41234 1011 ===6666";
-    while res_str != "" {
-        for (id, each) in reg_vec.iter().enumerate() {
-            (match_str, res_str) = match_reg(res_str, each);
-            if (match_str != "") {
-                println!("{}: {}", id, match_str);
-                break;
-            }
-        }
+    let mut handler_funcs = Vec::new();
+    handler_funcs.push("|s|{ println!(\"number: {}\", s); }".to_string());
+    handler_funcs.push("|s|{ println!(\"identifier: {}\", s); }".to_string());
+    handler_funcs.push("|s|{ println!(\"error: {}\", s); }".to_string());
 
-        // 未知错误
-        println!("unknown error:{}", &res_str[..1]);
-        res_str = &res_str[1..];
-    }
+    println!("res_str: {}", gen_code("", "", &reg_vec, &handler_funcs));
 }
 
 /// match_reg
 /// 用于匹配正则表达式
-fn match_reg<'a>(s: &'a str, dfa: &rlex::Dfa) -> (&'a str, &'a str) {
+fn match_reg<'a>(s: &'a str, lookup: &rlex::LookupTable) -> (&'a str, &'a str) {
     let mut state: usize = 0;
     let mut last_match_index = 0;
     let mut matched = false;
 
     for (index, each) in s.as_bytes().iter().enumerate() {
-        if let Some(next_state) = dfa.lookup[state].get(each) {
+        if let Some(next_state) = lookup.states[state].get(each) {
             state = *next_state;
 
             // 如果可接受，则更新最后一个可接受状态
-            if dfa.is_acceptable(state) {
+            if lookup.is_acceptable(state) {
                 last_match_index = index;
                 matched = true;
             }
