@@ -15,7 +15,6 @@ pub struct Bar {
 }
 
 // ======================
-
 #[derive(Serialize, Deserialize)]
 pub struct LookupTable {
     pub accept_states: Vec<usize>,
