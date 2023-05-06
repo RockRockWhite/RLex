@@ -1,9 +1,59 @@
+use regex::Regex;
 use std::collections::HashMap;
 
 pub struct PostfixExpr(pub Vec<u8>);
 
+/// to_simple_regex
+/// 将复杂正则表达式转换为简单正则表达式
+pub fn to_simple_regex(expr: &str) -> String {
+    let mut expr: String = expr.to_string();
+
+    // 替换[A-z]为(a|b|c|...|z)
+    for captures in Regex::new(r#"\[(.*?)\]"#)
+        .unwrap()
+        .captures_iter(&expr.clone())
+    {
+        let mut in_closure = captures[1].to_string();
+        let mut to_replace = String::new();
+        // 查找其中如A-z的字符，将其转换为(a|b|c|...|z)
+        for a2b in Regex::new(r#"(.)-(.)"#).unwrap().captures_iter(&expr) {
+            let mut a2b_replace = String::new();
+            let mut from = a2b[1].chars().next().unwrap();
+            let to = a2b[2].chars().next().unwrap();
+
+            if to < from {
+                panic!("Invalid regex: {}-{}", from, to);
+            }
+
+            while from <= to {
+                a2b_replace.push(from);
+                from = (from as u8 + 1) as char;
+            }
+
+            // 替换
+            in_closure = in_closure.replace(&a2b[0], &a2b_replace);
+        }
+
+        // 为每个字符加上或
+        for (index, c) in in_closure.chars().enumerate() {
+            if index != 0 {
+                to_replace.push('|');
+            }
+
+            to_replace.push(c);
+        }
+        // warp with ()
+        to_replace = format!("({})", to_replace);
+
+        // replace
+        expr = expr.replace(&captures[0], &to_replace);
+    }
+
+    expr
+}
+
 pub fn to_explicit_concat_expr(expr: &str) -> String {
-    let mut res = String::from("(");
+    let mut res: String = String::from("(");
 
     expr.as_bytes()
         .iter()
@@ -35,6 +85,7 @@ pub fn to_explicit_concat_expr(expr: &str) -> String {
 /// to_postfix
 /// 将中缀表达式转换为后缀表达式
 pub fn to_postfix(expr: &str) -> PostfixExpr {
+    let expr = &to_simple_regex(expr);
     let expr = to_explicit_concat_expr(expr);
     // 表达正则运算符的优先级
     // other表示其他所有的优先级
