@@ -9,8 +9,8 @@
         y: i32,
     }
 %}
-    number = "(0|1|2|3|4)*"
-    idenfitier = "(a|b|c|d|e)(a|b|c|d|e|0|1|2|3|4)*"
+    number = "[0-9]*"
+    idenfitier = "[A-Za-z][A-Za-z0-9]*"
     error = "( |;|?|,|!|=)*"
 %%
     {number} -> |s|{
