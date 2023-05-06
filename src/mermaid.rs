@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{dfa::Dfa, nfa::StateVertex, DfaVertexRef, NFA};
+use crate::{dfa::Dfa, nfa::StateVertex, DfaVertexRef, Nfa};
 
 /// Converts an NFA to a mermaid graph
 /// https://mermaid-js.github.io/mermaid/#/graph?id=graph
@@ -10,7 +10,7 @@ use crate::{dfa::Dfa, nfa::StateVertex, DfaVertexRef, NFA};
 /// B((B))
 /// A--a-->B
 /// ```
-pub fn parse_nfa(nfa: &NFA) -> String {
+pub fn parse_nfa(nfa: &Nfa) -> String {
     // 遍历图
     let mut visited = Vec::new();
     let edge = tarverse_nfa_vertex(Rc::clone(&nfa.start), &mut visited);

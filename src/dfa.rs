@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 
-use crate::{nfa::NfaVertexRef, NFA};
+use crate::{nfa::NfaVertexRef, Nfa};
 
 pub struct StateVertex {
     pub acceptable: bool,
@@ -55,6 +55,10 @@ impl Dfa {
     pub fn get_start(&self) -> DfaVertexRef {
         DfaVertexRef::clone(&self.vertexs[0])
     }
+
+    pub fn is_acceptable(&self, id: usize) -> bool {
+        self.vertexs.get(id).unwrap().borrow().acceptable
+    }
 }
 
 /// epsilon_closure
@@ -77,7 +81,7 @@ pub fn epsilon_closure(vertex: NfaVertexRef, visited: &mut Vec<NfaVertexRef>) {
 /// to_dfa
 /// convert nfa to dfa
 /// return start vertex of dfa
-pub fn to_dfa(nfa: &NFA) -> Dfa {
+pub fn to_dfa(nfa: &Nfa) -> Dfa {
     // 以nfa的开始节点的epsilon-closure为开始节点
     let start = DfaVertexRef::new();
 

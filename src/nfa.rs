@@ -47,14 +47,14 @@ impl PartialEq for NfaVertexRef {
     }
 }
 
-pub struct NFA {
+pub struct Nfa {
     pub start: NfaVertexRef,
     pub end: NfaVertexRef,
 }
 
-pub fn to_nfa(expr: &PostfixExpr) -> NFA {
+pub fn to_nfa(expr: &PostfixExpr) -> Nfa {
     let expr = &expr.0;
-    let mut stack: Vec<NFA> = Vec::new();
+    let mut stack: Vec<Nfa> = Vec::new();
 
     // let mut left: Option<Rc<StateVertex>> = Option::None;
     // let mut right: Option<Rc<StateVertex>> = Option::None;
@@ -64,7 +64,7 @@ pub fn to_nfa(expr: &PostfixExpr) -> NFA {
             b'|' => {
                 // 对应或的逻辑
                 // 按照固定的公式处理
-                let curr_nfa = NFA {
+                let curr_nfa = Nfa {
                     start: NfaVertexRef::new(),
                     end: NfaVertexRef::new(),
                 };
@@ -103,7 +103,7 @@ pub fn to_nfa(expr: &PostfixExpr) -> NFA {
 
                 let left = stack.pop().unwrap();
 
-                let curr_nfa = NFA {
+                let curr_nfa = Nfa {
                     start: NfaVertexRef::new(),
                     end: NfaVertexRef::new(),
                 };
@@ -143,7 +143,7 @@ pub fn to_nfa(expr: &PostfixExpr) -> NFA {
                     .epsilon_neighbors
                     .push(NfaVertexRef::clone(&right.start));
 
-                stack.push(NFA {
+                stack.push(Nfa {
                     start: NfaVertexRef::clone(&left.start),
                     end: NfaVertexRef::clone(&right.end),
                 });
@@ -151,7 +151,7 @@ pub fn to_nfa(expr: &PostfixExpr) -> NFA {
             _ => {
                 // 若只是字母，创建对应的节点，然后入栈
                 // 例如：S0 --a--> S1
-                let curr_nfa = NFA {
+                let curr_nfa = Nfa {
                     start: NfaVertexRef::new(),
                     end: NfaVertexRef::new(),
                 };
