@@ -1,30 +1,16 @@
-use core::num;
+use std::env;
 
 use rlex::gen_code;
 
 fn main() {
-    // let postfix = rlex::to_postfix("c(a|bbcb*)*(ab)");
-    // // let postfix = rlex::to_postfix("c(abc|b*)");
-    // let nfa = rlex::to_nfa(&postfix);
-    // let dfa = rlex::to_dfa(&nfa);
+    // 读取命令行参数
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 3 {
+        println!("Usage: rlex <config_file> <output_file>");
+        return;
+    }
 
-    // // let mermaid = rlex::mermaid::parse_nfa(&nfa);
-    // let mermaid = rlex::mermaid::parse_dfa(&dfa);
-    // println!("{}", mermaid);
-
-    // let lookup = &dfa.lookup;
-
-    // lookup.iter().enumerate().for_each(|(index, each)| {
-    //     print!("{}: [ ", index);
-    //     each.iter().for_each(|(&key, value)| {
-    //         print!("{}: {:?} ", key as char, value);
-    //     });
-    //     println!(" ]");
-    // });
-    // println!("is_acceptable: {:?}", match_reg("caaabbcbbcbab", &dfa));
-    // my_test()
-
-    let config = rlex::parse_config("sample.rlex");
+    let config = rlex::parse_config(&args[1]);
 
     // 生成lookup_table和handler_funcs
     let mut lookup_tables = Vec::new();
@@ -44,7 +30,9 @@ fn main() {
         &lookup_tables,
         &handler_funcs,
     );
-    println!("{}", code);
+
+    // 写入文件
+    std::fs::write(&args[2], code).unwrap();
 }
 
 // fn my_test() {
