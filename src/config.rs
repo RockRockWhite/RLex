@@ -147,7 +147,7 @@ fn replace_regex_variables(
     for variable in variables {
         let variable_no_blanket = variable.replace("{", "").replace("}", "");
         if let Some(val) = definitions.get(&variable_no_blanket) {
-            res = res.replace(&variable, val);
+            res = res.replace(&variable, format!("({})", val).as_str());
         } else {
             return Err(format!(
                 "parsing config error: variable \"{}\" not defined",
