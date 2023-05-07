@@ -1,5 +1,44 @@
 use regex::Regex;
-use std::{collections::HashMap, fs::File, io::Read};
+use std::{collections::HashMap, error::Error, fs::File, io::Read};
+
+const RLEX_FILE_SAMPLE: &str = r#"
+%{
+    // declarations
+    // declare your structs here
+    pub struct Foo {
+        x: i32,
+        y: i32,
+    }
+
+    pub struct Bar {
+        x: i32,
+        y: i32,
+    }
+%}
+    // definitions
+    // define your regex variables here
+    number = "[0-9]*"
+    idenfitier = "[A-Za-z][A-Za-z0-9]*"
+    error = "( |;|?|,|!|=)*"
+%%
+    // rules
+    // define your rules here
+    // regex -> handler_func
+    {number} -> |s|{
+        println!("number: {}", s);
+    } ;;
+    {idenfitier} -> |s|{
+        println!("idenfitier: {}", s);
+    } ;;
+    {error} -> |s|{
+        println!("error: {}", s);
+    } ;;
+%%
+    // variables
+    // define your variables here
+    pub a: i32,
+    pub b: i64, 
+"#;
 
 pub struct Config {
     pub declarations: String,
@@ -7,68 +46,115 @@ pub struct Config {
     pub variables: String,
 }
 
-pub fn parse_config(path: &str) -> Config {
+pub fn parse_config(path: &str) -> Result<Config, Box<dyn Error>> {
     // 读取文件
-    let mut f = File::open(path).unwrap();
+    let (declarations, definitions, rules, variables) = read_config_file(path)?;
+    // 将definitions中的变量提取出来
+    let definitions = parse_definations(&definitions)?;
+    // 将rules中的变量提取出来
+    let rules = parse_rules(&rules, &definitions)?;
+
+    Ok(Config {
+        declarations,
+        rules,
+        variables,
+    })
+}
+
+fn read_config_file(path: &str) -> Result<(String, String, String, String), Box<dyn Error>> {
+    let mut f = File::open(path)?;
+
     let mut buf = String::new();
-    f.read_to_string(&mut buf).unwrap();
+    f.read_to_string(&mut buf)?;
 
     // 读取各项配置
-    let captures = Regex::new(r"(?s)%\{(.+?)%\}(.*?)%%(.*?)%%(.+)")
+    if let Some(captures) = Regex::new(r"(?s)%\{(.+?)%\}(.*?)%%(.*?)%%(.+)")
         .unwrap()
         .captures(&buf)
-        .unwrap();
-    let declarations = captures[1].to_string();
-    let definitions = captures[2].to_string();
-    let rules = captures[3].to_string();
-    let variables = captures[4].to_string();
+    {
+        let declarations = captures[1].to_string();
+        let definitions = captures[2].to_string();
+        let rules = captures[3].to_string();
+        let variables = captures[4].to_string();
 
-    // 将definitions中的变量提取出来
-    let mut definitions_map: HashMap<String, String> = HashMap::new();
+        Ok((declarations, definitions, rules, variables))
+    } else {
+        Err(format!(
+            "parsing config error: config file format error\n*.flex file sample:\n{}\n",
+            RLEX_FILE_SAMPLE
+        )
+        .into())
+    }
+}
+
+fn parse_definations(definitions: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
+    let mut res: HashMap<String, String> = HashMap::new();
+
+    // parse definitions to hash_map
     for captures in Regex::new(r#"(\w+)\s*=\s*\"(.*?)\""#)
         .unwrap()
         .captures_iter(&definitions)
     {
         let key = captures[1].trim().to_string();
         let value = captures[2].trim().to_string();
-        definitions_map.insert(key, value);
+        res.insert(key, value);
     }
 
-    // 将rules中的变量提取出来
-    let mut rules_vec = Vec::new();
+    // replace all variables
+    let old_difinations = res.clone();
+    for (_, value) in &mut res {
+        *value = replace_regex_variables(value, &old_difinations)?;
+    }
+
+    Ok(res)
+}
+
+fn parse_rules(
+    rules: &str,
+    definitions: &HashMap<String, String>,
+) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+    let mut res = Vec::new();
     for captures in Regex::new(r#"([\s\S]*?)->([\s\S]*?);;"#)
         .unwrap()
         .captures_iter(&rules)
     {
         let key = captures.get(1).unwrap().as_str().trim().to_string();
+        // 替换key中变量
+        let key = replace_regex_variables(&key, &definitions)?;
         let value = captures.get(2).unwrap().as_str().trim().to_string();
-        rules_vec.push((key, value));
+        res.push((key, value));
     }
 
-    // 替换rules_vec中key的变量
-    for (key, _) in &mut rules_vec {
-        let mut to_replace = Vec::new();
+    Ok(res)
+}
 
-        Regex::new(r"\{\w+\}")
-            .unwrap()
-            .captures_iter(key)
-            .for_each(|captures| {
-                to_replace.push(captures[0].to_string());
-            });
+fn replace_regex_variables(
+    s: &str,
+    definitions: &HashMap<String, String>,
+) -> Result<String, Box<dyn Error>> {
+    let mut res = s.to_string();
+    let mut variables = Vec::new();
 
-        for each in to_replace {
-            *key = key.replace(
-                &each,
-                definitions_map
-                    .get(&each.replace("{", "").replace("}", ""))
-                    .unwrap(),
-            );
+    // find all variables
+    Regex::new(r"\{\w+\}")
+        .unwrap()
+        .captures_iter(&res)
+        .for_each(|captures| {
+            variables.push(captures[0].to_string());
+        });
+
+    // replace all variables
+    for variable in variables {
+        let variable_no_blanket = variable.replace("{", "").replace("}", "");
+        if let Some(val) = definitions.get(&variable_no_blanket) {
+            res = res.replace(&variable, val);
+        } else {
+            return Err(format!(
+                "parsing config error: variable \"{}\" not defined",
+                variable_no_blanket
+            )
+            .into());
         }
     }
-
-    Config {
-        declarations,
-        rules: rules_vec,
-        variables,
-    }
+    Ok(res)
 }

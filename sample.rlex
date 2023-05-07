@@ -1,17 +1,9 @@
 %{
-    pub struct Foo {
-        x: i32,
-        y: i32,
-    }
-
-    pub struct Bar {
-        x: i32,
-        y: i32,
-    }
 %}
     number = "[0-9]*"
     idenfitier = "[A-Za-z][A-Za-z0-9]*"
     error = "( |;|?|,|!|=)*"
+    test = "{number}{idenfitier}"
 %%
     {number} -> |s|{
         println!("number: {}", s);
@@ -21,6 +13,9 @@
     } ;;
     {error} -> |s|{
         println!("error: {}", s);
+    } ;;
+    {test} -> |s|{
+        println!("test: {}", s);
     } ;;
 %%
     pub a: i32,
