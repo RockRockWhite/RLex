@@ -2,6 +2,8 @@ use rlex::gen_code;
 use std::{env, error::Error};
 
 fn main() {
+    // let res = RegexExpr::to_charactors("a\\\\a");
+    // println!("{:?}", res);
     // 读取命令行参数
     let args = Args::build(env::args().collect()).unwrap_or_else(|err| {
         println!("{}", err);

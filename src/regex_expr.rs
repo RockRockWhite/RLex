@@ -1,7 +1,7 @@
 use regex::Regex;
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Charactor {
     Char(u8),
     LeftBracket,
@@ -16,8 +16,8 @@ pub struct RegexExpr(pub Vec<Charactor>);
 impl RegexExpr {
     pub fn build(expr: &str) -> Result<RegexExpr, Box<dyn Error>> {
         let res: String = Self::to_simple_regex(expr)?;
-        let res = Self::to_explicit_concat_expr(&res);
         let res = Self::to_charactors(&res)?;
+        let res = Self::to_explicit_concat_expr(&res);
         if let Ok(res) = Self::to_postfix(&res) {
             Ok(RegexExpr(res))
         } else {
@@ -76,92 +76,95 @@ impl RegexExpr {
         Ok(expr)
     }
 
-    fn to_explicit_concat_expr(expr: &str) -> String {
-        let mut res: String = String::from("(");
+    fn to_explicit_concat_expr(expr: &Vec<Charactor>) -> Vec<Charactor> {
+        let mut res = Vec::new();
+        res.push(Charactor::LeftBracket);
 
-        expr.as_bytes()
-            .iter()
-            .enumerate()
-            .for_each(|(index, &curr)| {
-                res.push(char::from(curr));
+        expr.iter().enumerate().for_each(|(index, &curr)| {
+            res.push(curr);
 
-                if curr == b'(' || curr == b'|' {
+            if curr == Charactor::LeftBracket || curr == Charactor::Or {
+                return;
+            }
+
+            // 还有下一个，则查看下一个
+            if index + 1 < expr.len() {
+                let next = expr[index + 1];
+
+                if next == Charactor::RightBracket
+                    || next == Charactor::Or
+                    || next == Charactor::Closure
+                {
                     return;
                 }
 
-                // 还有下一个，则查看下一个
-                if index + 1 < expr.len() {
-                    let next: u8 = expr.as_bytes()[index + 1];
+                res.push(Charactor::Concat);
+            }
+        });
 
-                    if next == b')' || next == b'|' || next == b'*' {
-                        return;
-                    }
-
-                    res.push('.');
-                }
-            });
-
-        res.push_str(")");
-
+        res.push(Charactor::RightBracket);
         res
     }
 
-    fn to_charactors(expr: &str) -> Result<Vec<Charactor>, Box<dyn Error>> {
+    pub fn to_charactors(expr: &str) -> Result<Vec<Charactor>, Box<dyn Error>> {
         let mut res = Vec::new();
         let mut last = b' ';
 
         for &curr in expr.as_bytes().iter() {
-            match curr {
-                b'(' => {
-                    res.push(Charactor::LeftBracket);
-                }
-                b')' => {
-                    res.push(Charactor::RightBracket);
-                }
-                b'*' => {
-                    res.push(Charactor::Closure);
-                }
-                b'|' => {
-                    res.push(Charactor::Or);
-                }
-                b'.' => {
-                    res.push(Charactor::Concat);
-                }
-                _ => {
-                    // 如果上一个字符是\，则表示当前字符是转义字符
-                    if last == b'\\' {
-                        match curr {
-                            b'.' => {
-                                res.push(Charactor::Char(b'.'));
-                            }
-                            b'(' => {
-                                res.push(Charactor::Char(b'('));
-                            }
-                            b')' => {
-                                res.push(Charactor::Char(b')'));
-                            }
-                            b'*' => {
-                                res.push(Charactor::Char(b'*'));
-                            }
-                            b'|' => {
-                                res.push(Charactor::Char(b'|'));
-                            }
-                            b'\\' => {
-                                res.push(Charactor::Char(b'\\'));
-                            }
-                            _ => {
-                                return Err(format!(
-                                    "parsing RegexExpr error: invalid regex escape: \\{}",
-                                    curr
-                                )
-                                .into());
-                            }
-                        }
+            // 如果上一个字符是\，则表示当前字符是转义字符
+            if last == b'\\' {
+                last = b' ';
+                match curr {
+                    b'.' => {
+                        res.push(Charactor::Char(b'.'));
                     }
-                    res.push(Charactor::Char(curr));
+                    b'(' => {
+                        res.push(Charactor::Char(b'('));
+                    }
+                    b')' => {
+                        res.push(Charactor::Char(b')'));
+                    }
+                    b'*' => {
+                        res.push(Charactor::Char(b'*'));
+                    }
+                    b'|' => {
+                        res.push(Charactor::Char(b'|'));
+                    }
+                    b'\\' => {
+                        res.push(Charactor::Char(b'\\'));
+                    }
+                    _ => {
+                        return Err(format!(
+                            "parsing RegexExpr error: invalid regex escape: \\{}",
+                            curr as char
+                        )
+                        .into());
+                    }
+                }
+            } else {
+                // 如果上一个字符不是\，则表示当前字符不是转义字符
+                match curr {
+                    b'(' => {
+                        res.push(Charactor::LeftBracket);
+                    }
+                    b')' => {
+                        res.push(Charactor::RightBracket);
+                    }
+                    b'*' => {
+                        res.push(Charactor::Closure);
+                    }
+                    b'|' => {
+                        res.push(Charactor::Or);
+                    }
+                    b'.' => {
+                        res.push(Charactor::Concat);
+                    }
+                    b'\\' => last = curr,
+                    _ => {
+                        res.push(Charactor::Char(curr));
+                    }
                 }
             }
-            last = curr;
         }
 
         Ok(res)
