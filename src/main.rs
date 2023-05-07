@@ -11,13 +11,19 @@ fn main() {
     run(args).unwrap_or_else(|err| {
         println!("{}", err);
         std::process::exit(1);
-    })
+    });
+
+    println!(
+        r#"Done.
+Please add the following dependencies to your Cargo.toml:
+serde = {{ version = "1.0", features = ["derive"] }}
+serde_json = "1.0""#
+    );
 }
 
 fn run(args: Args) -> Result<(), Box<dyn Error>> {
     // 读取配置文件
     let config = rlex::parse_config(&args.config_file)?;
-    println!("{:?}", config.rules);
 
     // 生成lookup_table和handler_funcs
     let mut lookup_tables = Vec::new();
@@ -41,6 +47,15 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
 
     // 写入文件
     std::fs::write(&args.output_file, code)?;
+
+    // 执行format
+    if let Err(err) = std::process::Command::new("rustfmt")
+        .arg(&args.output_file)
+        .output()
+    {
+        return Err(format!("rustfmt error : {}", err).into());
+    }
+
     Ok(())
 }
 
