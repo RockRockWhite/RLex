@@ -24,9 +24,10 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let mut handler_funcs = Vec::new();
     for (reg, handler_func) in config.rules.iter() {
         handler_funcs.push(handler_func.clone());
-        let postfix = rlex::to_postfix(reg);
-        let nfa = rlex::to_nfa(&postfix);
-        let dfa = rlex::to_dfa(&nfa);
+
+        let re = rlex::RegexExpr::build(reg)?;
+        let nfa = rlex::Nfa::build(&re);
+        let dfa = rlex::Dfa::build(&nfa);
         lookup_tables.push(dfa.lookup_table);
     }
 

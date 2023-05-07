@@ -1,4 +1,4 @@
-use crate::PostfixExpr;
+use crate::RegexExpr;
 use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 
 /// A vertex in the NFA graph.
@@ -52,153 +52,121 @@ pub struct Nfa {
     pub end: NfaVertexRef,
 }
 
-pub fn to_nfa(expr: &PostfixExpr) -> Nfa {
-    let expr = &expr.0;
-    let mut stack: Vec<Nfa> = Vec::new();
+impl Nfa {
+    pub fn build(expr: &RegexExpr) -> Nfa {
+        let expr = &expr.0;
+        let mut stack: Vec<Nfa> = Vec::new();
 
-    // let mut left: Option<Rc<StateVertex>> = Option::None;
-    // let mut right: Option<Rc<StateVertex>> = Option::None;
+        // let mut left: Option<Rc<StateVertex>> = Option::None;
+        // let mut right: Option<Rc<StateVertex>> = Option::None;
 
-    for each in expr.iter() {
-        match each {
-            b'|' => {
-                // 对应或的逻辑
-                // 按照固定的公式处理
-                let curr_nfa = Nfa {
-                    start: NfaVertexRef::new(),
-                    end: NfaVertexRef::new(),
-                };
+        for each in expr.iter() {
+            match each {
+                b'|' => {
+                    // 对应或的逻辑
+                    // 按照固定的公式处理
+                    let curr_nfa = Nfa {
+                        start: NfaVertexRef::new(),
+                        end: NfaVertexRef::new(),
+                    };
 
-                let right = stack.pop().unwrap();
-                let left = stack.pop().unwrap();
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
 
-                // 添加epsilon-move
+                    // 添加epsilon-move
 
-                left.end
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&curr_nfa.end));
-                right
-                    .end
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&curr_nfa.end));
+                    left.end
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&curr_nfa.end));
+                    right
+                        .end
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&curr_nfa.end));
 
-                curr_nfa
-                    .start
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&left.start));
-                curr_nfa
-                    .start
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&right.start));
+                    curr_nfa
+                        .start
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&left.start));
+                    curr_nfa
+                        .start
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&right.start));
 
-                stack.push(curr_nfa);
-            }
-            b'*' => {
-                // 对应闭包的逻辑
-                // 按照固定的公式处理
+                    stack.push(curr_nfa);
+                }
+                b'*' => {
+                    // 对应闭包的逻辑
+                    // 按照固定的公式处理
 
-                let left = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
 
-                let curr_nfa = Nfa {
-                    start: NfaVertexRef::new(),
-                    end: NfaVertexRef::new(),
-                };
+                    let curr_nfa = Nfa {
+                        start: NfaVertexRef::new(),
+                        end: NfaVertexRef::new(),
+                    };
 
-                // 添加epsilon-move
-                curr_nfa
-                    .start
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&left.start));
-                curr_nfa
-                    .start
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&curr_nfa.end));
+                    // 添加epsilon-move
+                    curr_nfa
+                        .start
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&left.start));
+                    curr_nfa
+                        .start
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&curr_nfa.end));
 
-                left.end
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&curr_nfa.start));
-                left.end
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&curr_nfa.end));
+                    left.end
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&curr_nfa.start));
+                    left.end
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&curr_nfa.end));
 
-                stack.push(curr_nfa);
-            }
-            b'.' => {
-                // 对应连接的逻辑
-                // 按照固定的公式处理
-                let right = stack.pop().unwrap();
-                let left = stack.pop().unwrap();
+                    stack.push(curr_nfa);
+                }
+                b'.' => {
+                    // 对应连接的逻辑
+                    // 按照固定的公式处理
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
 
-                // 添加epsilon-move
-                left.end
-                    .borrow_mut()
-                    .epsilon_neighbors
-                    .push(NfaVertexRef::clone(&right.start));
+                    // 添加epsilon-move
+                    left.end
+                        .borrow_mut()
+                        .epsilon_neighbors
+                        .push(NfaVertexRef::clone(&right.start));
 
-                stack.push(Nfa {
-                    start: NfaVertexRef::clone(&left.start),
-                    end: NfaVertexRef::clone(&right.end),
-                });
-            }
-            _ => {
-                // 若只是字母，创建对应的节点，然后入栈
-                // 例如：S0 --a--> S1
-                let curr_nfa = Nfa {
-                    start: NfaVertexRef::new(),
-                    end: NfaVertexRef::new(),
-                };
-                // 添加状态转移条件
-                curr_nfa
-                    .start
-                    .borrow_mut()
-                    .neighbors
-                    .insert(*each, NfaVertexRef::clone(&curr_nfa.end));
-                stack.push(curr_nfa);
+                    stack.push(Nfa {
+                        start: NfaVertexRef::clone(&left.start),
+                        end: NfaVertexRef::clone(&right.end),
+                    });
+                }
+                _ => {
+                    // 若只是字母，创建对应的节点，然后入栈
+                    // 例如：S0 --a--> S1
+                    let curr_nfa = Nfa {
+                        start: NfaVertexRef::new(),
+                        end: NfaVertexRef::new(),
+                    };
+                    // 添加状态转移条件
+                    curr_nfa
+                        .start
+                        .borrow_mut()
+                        .neighbors
+                        .insert(*each, NfaVertexRef::clone(&curr_nfa.end));
+                    stack.push(curr_nfa);
+                }
             }
         }
+
+        stack.pop().unwrap()
     }
-
-    stack.pop().unwrap()
-
-    // 进行连接
-    // let mut right = stack.pop().unwrap();
-
-    // while let Some(left) = stack.pop() {
-    //     // 添加epsilon-move
-    //     left.end
-    //         .borrow_mut()
-    //         .epsilon_neighbors
-    //         .push(Rc::clone(&right.start));
-
-    //     right = NFA {
-    //         start: Rc::clone(&left.start),
-    //         end: Rc::clone(&right.end),
-    //     };
-    // }
-
-    // while stack.len() > 1 {
-    //     let right = stack.pop().unwrap();
-    //     let left = stack.pop().unwrap();
-
-    //     // 添加epsilon-move
-    //     left.end
-    //         .borrow_mut()
-    //         .epsilon_neighbors
-    //         .push(Rc::clone(&right.start));
-
-    //     stack.push(NFA {
-    //         start: Rc::clone(&left.start),
-    //         end: Rc::clone(&right.end),
-    //     });
-    // }
-
-    // right
 }
