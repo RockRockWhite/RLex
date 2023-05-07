@@ -1,4 +1,4 @@
-use crate::RegexExpr;
+use crate::{regex_expr::Charactor, RegexExpr};
 use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 
 /// A vertex in the NFA graph.
@@ -62,7 +62,7 @@ impl Nfa {
 
         for each in expr.iter() {
             match each {
-                b'|' => {
+                Charactor::Or => {
                     // 对应或的逻辑
                     // 按照固定的公式处理
                     let curr_nfa = Nfa {
@@ -98,7 +98,7 @@ impl Nfa {
 
                     stack.push(curr_nfa);
                 }
-                b'*' => {
+                Charactor::Closure => {
                     // 对应闭包的逻辑
                     // 按照固定的公式处理
 
@@ -132,7 +132,7 @@ impl Nfa {
 
                     stack.push(curr_nfa);
                 }
-                b'.' => {
+                Charactor::Concat => {
                     // 对应连接的逻辑
                     // 按照固定的公式处理
                     let right = stack.pop().unwrap();
@@ -149,7 +149,7 @@ impl Nfa {
                         end: NfaVertexRef::clone(&right.end),
                     });
                 }
-                _ => {
+                Charactor::Char(c) => {
                     // 若只是字母，创建对应的节点，然后入栈
                     // 例如：S0 --a--> S1
                     let curr_nfa = Nfa {
@@ -161,9 +161,10 @@ impl Nfa {
                         .start
                         .borrow_mut()
                         .neighbors
-                        .insert(*each, NfaVertexRef::clone(&curr_nfa.end));
+                        .insert(*c, NfaVertexRef::clone(&curr_nfa.end));
                     stack.push(curr_nfa);
                 }
+                _ => {}
             }
         }
 

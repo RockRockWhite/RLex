@@ -1,12 +1,23 @@
 use regex::Regex;
 use std::{collections::HashMap, error::Error};
 
-pub struct RegexExpr(pub Vec<u8>);
+#[derive(PartialEq, Clone, Copy)]
+pub enum Charactor {
+    Char(u8),
+    LeftBracket,
+    RightBracket,
+    Closure,
+    Concat,
+    Or,
+}
+
+pub struct RegexExpr(pub Vec<Charactor>);
 
 impl RegexExpr {
     pub fn build(expr: &str) -> Result<RegexExpr, Box<dyn Error>> {
         let res: String = Self::to_simple_regex(expr)?;
         let res = Self::to_explicit_concat_expr(&res);
+        let res = Self::to_charactors(&res)?;
         if let Ok(res) = Self::to_postfix(&res) {
             Ok(RegexExpr(res))
         } else {
@@ -95,37 +106,102 @@ impl RegexExpr {
         res
     }
 
+    fn to_charactors(expr: &str) -> Result<Vec<Charactor>, Box<dyn Error>> {
+        let mut res = Vec::new();
+        let mut last = b' ';
+
+        for &curr in expr.as_bytes().iter() {
+            match curr {
+                b'(' => {
+                    res.push(Charactor::LeftBracket);
+                }
+                b')' => {
+                    res.push(Charactor::RightBracket);
+                }
+                b'*' => {
+                    res.push(Charactor::Closure);
+                }
+                b'|' => {
+                    res.push(Charactor::Or);
+                }
+                b'.' => {
+                    res.push(Charactor::Concat);
+                }
+                _ => {
+                    // 如果上一个字符是\，则表示当前字符是转义字符
+                    if last == b'\\' {
+                        match curr {
+                            b'.' => {
+                                res.push(Charactor::Char(b'.'));
+                            }
+                            b'(' => {
+                                res.push(Charactor::Char(b'('));
+                            }
+                            b')' => {
+                                res.push(Charactor::Char(b')'));
+                            }
+                            b'*' => {
+                                res.push(Charactor::Char(b'*'));
+                            }
+                            b'|' => {
+                                res.push(Charactor::Char(b'|'));
+                            }
+                            b'\\' => {
+                                res.push(Charactor::Char(b'\\'));
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "parsing RegexExpr error: invalid regex escape: \\{}",
+                                    curr
+                                )
+                                .into());
+                            }
+                        }
+                    }
+                    res.push(Charactor::Char(curr));
+                }
+            }
+            last = curr;
+        }
+
+        Ok(res)
+    }
+
     /// to_postfix
     /// 将中缀表达式转换为后缀表达式
-    pub fn to_postfix(expr: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn to_postfix(expr: &Vec<Charactor>) -> Result<Vec<Charactor>, Box<dyn Error>> {
         // 表达正则运算符的优先级
         // other表示其他所有的优先级
         let mut op_stack = Vec::new();
         let mut res_stack = Vec::new();
 
-        expr.as_bytes().iter().for_each(|&curr| {
+        expr.iter().for_each(|&curr| {
             match curr {
-                b'(' => {
+                Charactor::LeftBracket => {
                     // ( 无条件入栈
                     op_stack.push(curr);
                 }
-                b')' => {
+                Charactor::RightBracket => {
                     // ） 出栈直到遇到 (
                     while let Some(top) = op_stack.pop() {
-                        if top == b'(' {
+                        if top == Charactor::LeftBracket {
                             break;
                         }
 
                         res_stack.push(top);
                     }
                 }
-                b'*' | b'|' | b'.' => {
-                    let priority = HashMap::from([(b'*', 2), (b'|', 0), (b'.', 1)]);
+                Charactor::Closure | Charactor::Or | Charactor::Concat => {
+                    let priority = |c: &Charactor| match c {
+                        Charactor::Closure => 2,
+                        Charactor::Or => 0,
+                        Charactor::Concat => 1,
+                        _ => 0,
+                    };
 
                     // 弹栈直到栈顶元素为(或 优先级小于当前元素
                     while let Some(&top) = op_stack.last() {
-                        if top == b'(' || priority.get(&top).unwrap() < priority.get(&curr).unwrap()
-                        {
+                        if top == Charactor::LeftBracket || priority(&top) < priority(&curr) {
                             break;
                         }
 
