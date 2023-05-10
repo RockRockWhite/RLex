@@ -23,18 +23,6 @@
     Comments = (--{Asciis}*\n)|\(\*{Asciis}*\*\)
     SpecialNotation = \(|\)|{|}|\.|:|<-|,|;|+|-|\*|/|<|<=|=|>=|>|~|&|\|
 %%
-    {Keywords} -> |s|{
-        println!("<Keywords, {}>", s);
-    } ;;
-    {Comments} -> |s|{
-        println!("<Comments, {}>", s.replace("\n", "\\n"));
-    } ;;
-    {WhiteSpace} -> |s|{
-        println!("<WhiteSpace, {}>", s.replace("\n", "\\n").replace("\r", "\\r"));
-    } ;;
-    {SpecialNotation} -> |s|{
-        println!("<SpecialNotation, {}>", s);
-    } ;;
     {Integers} -> |s|{
         println!("<Integers, {}>", s);
     } ;;
@@ -46,6 +34,18 @@
     } ;;
     {Strings} -> |s|{
         println!("<Strings, \"{}\">", s);
+    } ;;
+    {Comments} -> |s|{
+        println!("<Comments, {}>", s.replace("\n", "\\n"));
+    } ;;
+    {Keywords} -> |s|{
+        println!("<Keywords, {}>", s);
+    } ;;
+    {WhiteSpace} -> |s|{
+        println!("<WhiteSpace, {}>", s.replace("\n", "\\n").replace("\r", "\\r"));
+    } ;;
+    {SpecialNotation} -> |s|{
+        println!("<SpecialNotation, {}>", s);
     } ;;
 %%
     pub a: i32,
