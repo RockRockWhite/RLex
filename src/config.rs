@@ -88,22 +88,23 @@ fn read_config_file(path: &str) -> Result<(String, String, String, String), Box<
 }
 
 fn parse_definations(definitions: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
-    let mut res: HashMap<String, String> = HashMap::new();
+    let mut raw_definations: Vec<(String, String)> = Vec::new();
 
     // parse definitions to hash_map
-    for captures in Regex::new(r#"(\w+\s*)=(\s*.*?)\n"#)
+    for captures in Regex::new(r#"([\s\S]*?)=([\s\S]*?)\n"#)
         .unwrap()
         .captures_iter(&definitions)
     {
         let key = captures[1].trim().to_string();
         let value = captures[2].trim().to_string();
-        res.insert(key, value);
+        raw_definations.push((key, value));
     }
 
     // replace all variables
-    let old_difinations = res.clone();
-    for (_, value) in &mut res {
-        *value = replace_regex_variables(value, &old_difinations)?;
+    // let old_difinations = res.clone();
+    let mut res: HashMap<String, String> = HashMap::new();
+    for (key, value) in &mut raw_definations {
+        res.insert(key.clone(), replace_regex_variables(value, &res)?.clone());
     }
 
     Ok(res)

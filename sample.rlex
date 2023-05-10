@@ -9,16 +9,16 @@
         y: i32,
     }
 %}
-    Digits = "[0-9]"
-    Lowercase = "[a-z]"
-    Uppercase = "[A-Z]"
-    Letters = "{Lowercase}|{Uppercase}"
-    Integers = "{Digits}{Digits}*"
-    TypeIdentifiers = "{Uppercase}{Letters}*"
-    ObjectIdentifiers = "{Lowercase}{Letters}*"
-    Strings = ""{Letters}*""
-    error = "( |;|?|,|!|=)*"
-    test = "\*|\\|\||\."
+    Digits = [0-9]
+    Lowercase = [a-z]
+    Uppercase = [A-Z]
+    Letters = {Lowercase}|{Uppercase}
+    Integers = {Digits}{Digits}*
+    TypeIdentifiers = {Uppercase}{Letters}*
+    ObjectIdentifiers = {Lowercase}{Letters}*
+    Strings = "{Letters}*"
+    error = ( |;|?|,|!|=)*
+    test = \*|\\|\||\.
 %%
     {Integers} -> |s|{
         println!("Integers: {}", s);
@@ -30,7 +30,7 @@
         println!("ObjectIdentifiers: {}", s);
     } ;;
     {Strings} -> |s|{
-        println!("ObjectIdentifiers: {}", s);
+        println!("Strings: {}", s);
     } ;;
 %%
     pub a: i32,
