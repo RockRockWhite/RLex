@@ -64,6 +64,11 @@ impl RegexExpr {
                     to_replace.push('|');
                 }
 
+                // 转义特殊字符
+                if c == '\\' || c == '.' || c == '(' || c == ')' || c == '*' || c == '|' {
+                    to_replace.push('\\');
+                }
+
                 to_replace.push(c);
             }
             // warp with ()

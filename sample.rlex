@@ -13,10 +13,11 @@
     Lowercase = [a-z]
     Uppercase = [A-Z]
     Letters = {Lowercase}|{Uppercase}
+    Asciis = [ -~]
     Integers = {Digits}{Digits}*
-    TypeIdentifiers = {Uppercase}{Letters}*
-    ObjectIdentifiers = {Lowercase}{Letters}*
-    Strings = "{Letters}*"
+    TypeIdentifiers = {Uppercase}({Letters}|{Digits}|_)*
+    ObjectIdentifiers = {Lowercase}({Letters}|{Digits}|_)*
+    Strings = "{Asciis}*"
     error = ( |;|?|,|!|=)*
     test = \*|\\|\||\.
 %%
