@@ -18,9 +18,14 @@
     TypeIdentifiers = {Uppercase}({Letters}|{Digits}|_)*
     ObjectIdentifiers = {Lowercase}({Letters}|{Digits}|_)*
     Strings = "{Asciis}*"
+    Keywords = class|else|false|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|esac|new|of|not|true
+    WhiteSpace = ｜｜
     error = ( |;|?|,|!|=)*
     test = \*|\\|\||\.
 %%
+    {Keywords} -> |s|{
+        println!("Keywords: {}", s);
+    } ;;
     {Integers} -> |s|{
         println!("Integers: {}", s);
     } ;;

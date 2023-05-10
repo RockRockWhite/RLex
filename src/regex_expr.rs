@@ -138,6 +138,24 @@ impl RegexExpr {
                     b'\\' => {
                         res.push(Charactor::Char(b'\\'));
                     }
+                    b'r' => {
+                        res.push(Charactor::Char(b'\r'));
+                    }
+                    b'n' => {
+                        res.push(Charactor::Char(b'\n'));
+                    }
+                    b't' => {
+                        res.push(Charactor::Char(b'\t'));
+                    }
+                    b'0' => {
+                        res.push(Charactor::Char(b'\0'));
+                    }
+                    b'f' => {
+                        res.push(Charactor::Char(b'\x0C'));
+                    }
+                    b'v' => {
+                        res.push(Charactor::Char(b'\x0B'));
+                    }
                     _ => {
                         return Err(format!(
                             "parsing RegexExpr error: invalid regex escape: \\{}",
