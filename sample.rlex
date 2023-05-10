@@ -33,7 +33,7 @@
         println!("<ObjectIdentifiers, {}>", s);
     } ;;
     {Strings} -> |s|{
-        println!("<Strings, \"{}\">", s);
+        println!("<Strings, {}>", s);
     } ;;
     {Comments} -> |s|{
         println!("<Comments, {}>", s.replace("\n", "\\n"));

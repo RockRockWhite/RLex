@@ -1,5 +1,6 @@
-use rlex::gen_code;
-use std::{env, error::Error};
+use rayon::{iter::Map, prelude::*};
+use rlex::{gen_code, LookupTable};
+use std::{collections::HashMap, env, error::Error};
 
 fn main() {
     // let res = RegexExpr::to_charactors("a\\\\a");
@@ -28,15 +29,43 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let config = rlex::parse_config(&args.config_file)?;
 
     // 生成lookup_table和handler_funcs
-    let mut lookup_tables = Vec::new();
-    let mut handler_funcs = Vec::new();
-    for (reg, handler_func) in config.rules.iter() {
-        handler_funcs.push(handler_func.clone());
+    // let mut lookup_tables = Vec::new();
+    // let mut handler_funcs = Vec::new();
 
-        let re = rlex::RegexExpr::build(reg)?;
-        let nfa = rlex::Nfa::build(&re);
-        let dfa = rlex::Dfa::build(&nfa);
-        lookup_tables.push(dfa.lookup_table);
+    // for (index, (reg, handler_func)) in config.rules.par_iter().enumerate() {
+    //     handler_funcs.push(handler_func.clone());
+
+    //     let re = rlex::RegexExpr::build(reg)?;
+    //     let nfa = rlex::Nfa::build(&re);
+    //     let dfa = rlex::Dfa::build(&nfa);
+    //     lookup_tables.push(dfa.lookup_table);
+    // }
+
+    let vec: Vec<_> = config
+        .rules
+        .par_iter()
+        .enumerate()
+        .map(|(index, (reg, handler_func))| {
+            let re = rlex::RegexExpr::build(reg).unwrap();
+            let nfa = rlex::Nfa::build(&re);
+            let dfa = rlex::Dfa::build(&nfa);
+
+            (index, dfa.lookup_table, handler_func.clone())
+        })
+        .collect();
+
+    let mut lookup_tables = Vec::with_capacity(vec.len());
+    let mut handler_funcs = Vec::with_capacity(vec.len());
+
+    // 初始化
+    for _ in 0..vec.len() {
+        lookup_tables.push(LookupTable::new());
+        handler_funcs.push(String::new());
+    }
+    // 按照index生成新的vec
+    for (index, lookup_table, handler_func) in vec {
+        lookup_tables[index] = lookup_table;
+        handler_funcs[index] = handler_func;
     }
 
     // 生成代码
