@@ -9,22 +9,28 @@
         y: i32,
     }
 %}
-    number = [0-9]*
-    idenfitier = [A-Za-z][A-Za-z0-9]*
-    error = ( |;|?|,|!|=)*
-    test = \*|\\|\||\.
+    Digits = "[0-9]"
+    Lowercase = "[a-z]"
+    Uppercase = "[A-Z]"
+    Letters = "{Lowercase}|{Uppercase}"
+    Integers = "{Digits}{Digits}*"
+    TypeIdentifiers = "{Uppercase}{Letters}*"
+    ObjectIdentifiers = "{Lowercase}{Letters}*"
+    Strings = ""{Letters}*""
+    error = "( |;|?|,|!|=)*"
+    test = "\*|\\|\||\."
 %%
-    {number} -> |s|{
-        println!("number: {}", s);
+    {Integers} -> |s|{
+        println!("Integers: {}", s);
     } ;;
-    {idenfitier} -> |s|{
-        println!("idenfitier: {}", s);
+    {TypeIdentifiers} -> |s|{
+        println!("TypeIdentifiers: {}", s);
     } ;;
-    {error} -> |s|{
-        println!("error: {}", s);
+    {ObjectIdentifiers} -> |s|{
+        println!("ObjectIdentifiers: {}", s);
     } ;;
-    ({test})* -> |s|{
-        println!("test: {}", s);
+    {Strings} -> |s|{
+        println!("ObjectIdentifiers: {}", s);
     } ;;
 %%
     pub a: i32,
