@@ -91,7 +91,7 @@ fn parse_definations(definitions: &str) -> Result<HashMap<String, String>, Box<d
     let mut res: HashMap<String, String> = HashMap::new();
 
     // parse definitions to hash_map
-    for captures in Regex::new(r#"(\w+)\s*=\s*\"(.*?)\""#)
+    for captures in Regex::new(r#"(\w+\s*)=(\s*.*?)\n"#)
         .unwrap()
         .captures_iter(&definitions)
     {
