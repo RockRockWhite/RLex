@@ -19,24 +19,33 @@
     ObjectIdentifiers = {Lowercase}({Letters}|{Digits}|_)*
     Strings = "{Asciis}*"
     Keywords = class|else|false|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|esac|new|of|not|true
-    WhiteSpace = ｜｜
-    error = ( |;|?|,|!|=)*
-    test = \*|\\|\||\.
+    WhiteSpace = ( |\n|\r|\f|\t|\v)*
+    Comments = (--{Asciis}*\n)|\(\*{Asciis}*\*\)
+    SpecialNotation = \(|\)|{|}|\.|:|<-|,|;|+|-|\*|/|<|<=|=|>=|>|~|&|\|
 %%
     {Keywords} -> |s|{
-        println!("Keywords: {}", s);
+        println!("<Keywords, {}>", s);
+    } ;;
+    {Comments} -> |s|{
+        println!("<Comments, {}>", s.replace("\n", "\\n"));
+    } ;;
+    {WhiteSpace} -> |s|{
+        println!("<WhiteSpace, {}>", s.replace("\n", "\\n").replace("\r", "\\r"));
+    } ;;
+    {SpecialNotation} -> |s|{
+        println!("<SpecialNotation, {}>", s);
     } ;;
     {Integers} -> |s|{
-        println!("Integers: {}", s);
+        println!("<Integers, {}>", s);
     } ;;
     {TypeIdentifiers} -> |s|{
-        println!("TypeIdentifiers: {}", s);
+        println!("<TypeIdentifiers, {}>", s);
     } ;;
     {ObjectIdentifiers} -> |s|{
-        println!("ObjectIdentifiers: {}", s);
+        println!("<ObjectIdentifiers, {}>", s);
     } ;;
     {Strings} -> |s|{
-        println!("Strings: {}", s);
+        println!("<Strings, \"{}\">", s);
     } ;;
 %%
     pub a: i32,
