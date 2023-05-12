@@ -137,7 +137,7 @@ impl Dfa {
 
         let mut lookup_table = LookupTable::new();
         // 生成lookup table
-        visited.iter().enumerate().for_each(|(id, each)| {
+        visited.iter().enumerate().for_each(|(_, each)| {
             let mut curr_state = LookupState::new();
 
             // 指定handler
