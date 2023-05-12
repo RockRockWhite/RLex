@@ -165,7 +165,7 @@ fn tarverse_dfa_vertex(vertex: DfaVertexRef, visited: &mut Vec<DfaVertexRef>) ->
             let neighbor_id = find_vertex_id(DfaVertexRef::clone(&vertex), visited);
 
             // 添加当前节点到该节点的边
-            edges.push_str(&format!("{}--{}-->{}\n", id, cond as char, neighbor_id));
+            edges.push_str(&format!("{}--\"{}\"-->{}\n", id, cond as char, neighbor_id));
         });
 
     edges
