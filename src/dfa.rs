@@ -1,11 +1,16 @@
 use crate::{nfa::NfaVertexRef, Nfa};
 use serde::{Deserialize, Serialize};
-use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    rc::Rc,
+};
 
 pub struct StateVertex {
-    pub acceptable: bool,
     pub epsilon_closure: Vec<NfaVertexRef>,
     pub neighbors: HashMap<u8, DfaVertexRef>,
+    pub handlers: HashSet<usize>,
 }
 
 pub struct DfaVertexRef(Rc<RefCell<StateVertex>>);
@@ -13,9 +18,9 @@ pub struct DfaVertexRef(Rc<RefCell<StateVertex>>);
 impl DfaVertexRef {
     pub fn new() -> Self {
         DfaVertexRef(Rc::new(RefCell::new(StateVertex {
-            acceptable: false,
             epsilon_closure: Vec::new(),
             neighbors: HashMap::new(),
+            handlers: HashSet::new(),
         })))
     }
 }
@@ -66,21 +71,32 @@ impl NfaVertexRef {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct LookupState {
+    pub handlers: HashSet<usize>,
+    pub neighbors: HashMap<u8, usize>,
+}
+
+impl LookupState {
+    pub fn new() -> Self {
+        LookupState {
+            handlers: HashSet::new(),
+            neighbors: HashMap::new(),
+        }
+    }
+
+    pub fn insert_neighbor(&mut self, ch: u8, index: usize) {
+        self.neighbors.insert(ch, index);
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct LookupTable {
-    pub accept_states: Vec<usize>,
-    pub states: Vec<HashMap<u8, usize>>,
+    pub states: Vec<LookupState>,
 }
 
 impl LookupTable {
     pub fn new() -> Self {
-        LookupTable {
-            accept_states: Vec::new(),
-            states: Vec::new(),
-        }
-    }
-
-    pub fn is_acceptable(&self, id: usize) -> bool {
-        self.accept_states.contains(&id)
+        LookupTable { states: Vec::new() }
     }
 }
 
@@ -104,17 +120,28 @@ impl Dfa {
         let mut visited = Vec::new();
         Self::tarverse_vertex(DfaVertexRef::clone(&start), &mut visited);
 
-        // 标注可接受状态
+        // 标记每个节点的handler
         visited.iter().for_each(|each| {
-            if each.borrow().epsilon_closure.contains(&nfa.end) {
-                each.borrow_mut().acceptable = true;
-            }
+            let mut handlers = HashSet::new();
+            each.borrow()
+                .epsilon_closure
+                .iter()
+                .for_each(|each_closure| {
+                    if let Some(handler) = each_closure.borrow().handler {
+                        handlers.insert(handler);
+                    }
+                });
+
+            each.borrow_mut().handlers = handlers;
         });
 
         let mut lookup_table = LookupTable::new();
         // 生成lookup table
         visited.iter().enumerate().for_each(|(id, each)| {
-            let mut curr_state = HashMap::new();
+            let mut curr_state = LookupState::new();
+
+            // 指定handler
+            curr_state.handlers = each.borrow().handlers.clone();
 
             // 遍历所有的邻居，写到转换表中
             each.borrow()
@@ -125,15 +152,10 @@ impl Dfa {
                         .iter()
                         .position(|each| (*each) == (*neighbor))
                         .unwrap();
-                    curr_state.insert(cond, id);
+                    curr_state.insert_neighbor(cond, id);
                 });
 
             lookup_table.states.push(curr_state);
-
-            // 如果当前节点是可接受状态，则将其id添加到可接受状态列表中
-            if each.borrow().acceptable {
-                lookup_table.accept_states.push(id);
-            }
         });
 
         Dfa {
@@ -216,9 +238,5 @@ impl Dfa {
         vertex.borrow().neighbors.iter().for_each(|(_, neighbor)| {
             Self::tarverse_vertex(DfaVertexRef::clone(neighbor), visited)
         });
-    }
-
-    pub fn is_acceptable(&self, id: usize) -> bool {
-        self.vertexs.get(id).unwrap().borrow().acceptable
     }
 }

@@ -1,6 +1,5 @@
 use crate::{regex_expr::Charactor, RegexExpr};
 use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
-
 /// A vertex in the NFA graph.
 /// NFA中的一个节点
 /// value: 该节点的值
@@ -8,6 +7,7 @@ use std::{cell::RefCell, collections::HashMap, ops::Deref, rc::Rc};
 pub struct StateVertex {
     pub neighbors: HashMap<u8, NfaVertexRef>,
     pub epsilon_neighbors: Vec<NfaVertexRef>,
+    pub handler: Option<usize>,
 }
 
 impl StateVertex {
@@ -15,6 +15,7 @@ impl StateVertex {
         StateVertex {
             neighbors: HashMap::new(),
             epsilon_neighbors: Vec::new(),
+            handler: Option::None,
         }
     }
 }
@@ -53,7 +54,7 @@ pub struct Nfa {
 }
 
 impl Nfa {
-    pub fn build(expr: &RegexExpr) -> Nfa {
+    pub fn build(expr: &RegexExpr, handler_id: usize) -> Nfa {
         let expr = &expr.0;
         let mut stack: Vec<Nfa> = Vec::new();
 
@@ -168,6 +169,60 @@ impl Nfa {
             }
         }
 
-        stack.pop().unwrap()
+        let res = stack.pop().unwrap();
+        // 标记终止状态handler
+        res.end.borrow_mut().handler = Some(handler_id);
+        res
+    }
+}
+
+pub struct NfaBuilder {
+    pub nfa: Option<Nfa>,
+}
+
+impl NfaBuilder {
+    pub fn new() -> NfaBuilder {
+        NfaBuilder { nfa: Option::None }
+    }
+
+    pub fn add_rule(&mut self, expr: &RegexExpr, handler_id: usize) {
+        let res;
+
+        if let Some(left) = self.nfa.take() {
+            let right = Nfa::build(expr, handler_id);
+
+            // 为两个NFA添加Or逻辑
+            res = Nfa {
+                start: NfaVertexRef::new(),
+                end: NfaVertexRef::new(),
+            };
+            // 添加epsilon-move
+            left.end
+                .borrow_mut()
+                .epsilon_neighbors
+                .push(NfaVertexRef::clone(&res.end));
+            right
+                .end
+                .borrow_mut()
+                .epsilon_neighbors
+                .push(NfaVertexRef::clone(&res.end));
+
+            res.start
+                .borrow_mut()
+                .epsilon_neighbors
+                .push(NfaVertexRef::clone(&left.start));
+            res.start
+                .borrow_mut()
+                .epsilon_neighbors
+                .push(NfaVertexRef::clone(&right.start));
+        } else {
+            res = Nfa::build(expr, handler_id);
+        }
+
+        self.nfa = Option::Some(res);
+    }
+
+    pub fn build(&mut self) -> Option<Nfa> {
+        self.nfa.take()
     }
 }

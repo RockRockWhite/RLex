@@ -28,22 +28,25 @@ fn run(args: Args) -> Result<(), Box<dyn Error>> {
     let config = rlex::parse_config(&args.config_file)?;
 
     // 生成lookup_table和handler_funcs
-    let mut lookup_tables = Vec::new();
     let mut handler_funcs = Vec::new();
+
+    let mut nfa_builder = rlex::NfaBuilder::new();
+    // build nfa
     for (reg, handler_func) in config.rules.iter() {
+        let handler_id = handler_funcs.len();
         handler_funcs.push(handler_func.clone());
 
-        let re = rlex::RegexExpr::build(reg)?;
-        let nfa = rlex::Nfa::build(&re);
-        let dfa = rlex::Dfa::build(&nfa);
-        lookup_tables.push(dfa.lookup_table);
+        nfa_builder.add_rule(&rlex::RegexExpr::build(reg)?, handler_id);
     }
+    let nfa = nfa_builder.build().unwrap();
+    let dfa = rlex::Dfa::build(&nfa);
+    let lookup_table = dfa.lookup_table;
 
     // 生成代码
     let code = gen_code(
         &config.declarations,
         &config.variables,
-        &lookup_tables,
+        &lookup_table,
         &handler_funcs,
     );
 
