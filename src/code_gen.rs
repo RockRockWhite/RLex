@@ -111,7 +111,7 @@ impl Rlex {{
                 if !lookup.states[state].handlers.is_empty() {{
                     last_match_index = index;
                     matched = true;
-                    handler_id = *lookup.states[state].handlers.iter().max().unwrap();
+                    handler_id = *lookup.states[state].handlers.iter().min().unwrap();
                 }}
             }} else {{
                 break;

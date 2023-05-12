@@ -23,6 +23,9 @@
     Comments = (--{Asciis}*\n)|\(\*{Asciis}*\*\)
     SpecialNotation = \(|\)|{|}|\.|:|<-|,|;|+|-|\*|/|<|<=|=|>=|>|~|&|\|
 %%
+    {Keywords} -> |s|{
+        println!("<Keywords, {}>", s);
+    } ;;
     {Integers} -> |s|{
         println!("<Integers, {}>", s);
     } ;;
@@ -33,7 +36,7 @@
         println!("<ObjectIdentifiers, {}>", s);
     } ;;
     {Strings} -> |s|{
-        println!("<Strings, \"{}\">", s);
+        println!("<Strings, {}>", s);
     } ;;
     {Comments} -> |s|{
         println!("<Comments, {}>", s.replace("\n", "\\n"));
